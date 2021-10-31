@@ -83,14 +83,14 @@ class Client(QMainWindow):
 
     def Send(self, data):
         try:
-            self.s.sendall(str(len(data)).zfill(12).encode())
+            self.s.sendall(str(len(data)).zfill(8).encode())
             self.s.sendall(data)
         except Exception as e:
             raise Exception("Not connected to server")
 
     def Recv(self):
         try:
-            data_size = int(self.s.recv(12).decode())
+            data_size = int(self.s.recv(8).decode())
             data = self.s.recv(data_size)
             return data
         except Exception as e:

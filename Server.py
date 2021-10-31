@@ -22,8 +22,6 @@ from server_functions.keyboard_related import KeyboardHelper
 from server_functions.process_manager import ProcessManager
 from server_functions.app_manager import AppManager
 from server_functions.registry_manager import RegistryManager
-from server_functions.stream_server import StreamServer
-
 #from server_functions.stream_server import StreamServer
 
 def dict2bytes(aDict):
@@ -124,7 +122,11 @@ class Server(QMainWindow):
                     checkReturn=dict2bytes(check)
                     self.res(checkReturn,conn)
                 elif (data["state"]=="Unhook"):
-                    data=self.keyboardHelperPointer.Unhook()
+                    check=self.keyboardHelperPointer.Unhook()
+                    checkReturn=dict2bytes(check)
+                    self.res(checkReturn,conn)
+                elif (data["state"]=="Show"):
+                    data=self.keyboardHelperPointer.Show()
                     listReturn=dict2bytes(data)
                     self.res(listReturn,conn)
                 elif (data["state"]=="Lock"): 
@@ -232,20 +234,6 @@ class Server(QMainWindow):
                         self.res(dict2bytes({"value": "Create key successfully"}), conn)
                     except Exception as e:
                         self.send_text(conn, "ERROR")
-                elif data["state"] == "StartStream":
-                    try:
-                        ip, port = addr 
-                        self.res(dict2bytes({"ip": ip, "port": port}), conn)
-    
-                        self.stream_server = StreamServer(ip, port)
-                        self.stream_server.start_stream()
-                    except:
-                        return
-                elif data["state"] == "StopStream":
-                    try:
-                        self.stream_server.end_stream()
-                    except:
-                        return
         except Exception as e:
             return
         
@@ -261,13 +249,13 @@ class Server(QMainWindow):
             self.socket.close()
     def res(self, data, conn):
         try:
-            conn.sendall(str(len(data)).zfill(12).encode())
+            conn.sendall(str(len(data)).zfill(8).encode())
             conn.sendall(data)
         except:
             raise Exception('')
     def recv(self, conn):
         try:
-            data_size = int(conn.recv(12).decode())
+            data_size = int(conn.recv(8).decode())
             data = conn.recv(data_size)
             return data
         except:
