@@ -106,14 +106,23 @@ class Server(QMainWindow):
                 elif (data["state"] == "Capture"):
                     resData = self.captureHelperPointer.image_to_byte_array(data["quality"])
                     self.res(resData, conn)
-                elif (data["state"] == "DigFile"):
-                    downOnelevelList = self.fileHelperPointer.digOneLevel(data["filename"])
+                elif (data["state"] == "BackHome"):
+                    homeList = self.fileHelperPointer.back_to_drives()
+                    listReturn=dict2bytes(homeList)
+                    self.res(listReturn, conn)
+                elif (data["state"] == "FileHandle"):
+                    downOnelevelList = self.fileHelperPointer.Handle(data["path"])
                     listReturn=dict2bytes(downOnelevelList)
                     self.res(listReturn, conn)
-                elif (data["state"]=="DeleteFile"):
-                    check=self.fileHelperPointer.deleteFile(data["filename"])
+                elif (data["state"] == "DeleteFile"):
+                    check = self.fileHelperPointer.deleteFile(data["filename"])
                     checkReturn=dict2bytes(check)
                     self.res(checkReturn,conn)
+                elif (data["state"] == "UploadFile"):
+                    fileData = self.recv(conn)
+                    check = self.fileHelperPointer.download(data["filename"], fileData)
+                    check = dict2bytes(check)
+                    self.res(check, conn)
                 elif (data["state"]=="DownloadFile"):
                     myfile=base64.b64decode(data["data"])
                     check=self.fileHelperPointer.receiveFileFromClient(data["filename"], myfile)
@@ -135,25 +144,21 @@ class Server(QMainWindow):
                     check=self.keyboardHelperPointer.UnblockKeyboard()
                     checkReturn=dict2bytes(check)
                     self.res(checkReturn,conn)
-
                 elif (data["state"] == "GetProcesses"):
                     processes_byte_list = dict2bytes(self.process_manager.get_running_processes_list())
                     self.res(processes_byte_list, conn)
-
                 elif (data["state"] == "KillProcess"):
                     data = self.recv(conn)
                     data = bytes2dict(data)
                     process_id = data["process_id"]
                     self.process_manager.kill_process(process_id)
                     self.res(dict2bytes({"message": f'Kill process with id = {process_id} successfully'}), conn)
-
                 elif (data["state"] == "StartProcess"):
                     data = self.recv(conn)
                     data = bytes2dict(data)
                     process_name = data["process_name"]
                     self.process_manager.start_process(process_name)
                     self.res(dict2bytes({"message": f'Start {process_name} successfully'}), conn)
-
                 elif (data["state"] == "GetApps"):
                     apps_byte_list = dict2bytes(self.app_manager.get_running_app_list())
                     self.res(apps_byte_list, conn)

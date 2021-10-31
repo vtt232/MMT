@@ -1,20 +1,37 @@
-from gui.client.App_process.TableView import TableView
+from gui.client.App_process.TableView import Ui_Form
 from gui.client.App_process.InputButtonView import InputButtonView
 
+from PyQt5.QtWidgets import QWidget
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QMainWindow
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QVBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QTableWidgetItem
+from PyQt5.QtWidgets import QFileDialog
+
 from gui.popup import PopUp
-
-
-class AppView(TableView):
+class AppView(QWidget):
     def __init__(self, client):
-        super(AppView, self).__init__(
-            "App", ["App", "ID", "Thread Counts"])
+        super(AppView, self).__init__()
 
         self.client = client
+        self.ui = Ui_Form()
+        self.ui.setupUi(self)
+        
+        self.ui.view_button.clicked.connect(self.view_function)
+        self.ui.kill_button.clicked.connect(self.kill_function)
+        self.ui.start_button.clicked.connect(self.start_function)
+        self.ui.clear_button.clicked.connect(self.clear_data)
+    def clear_data(self):
+        self.ui.tableWidget.setRowCount(0)
+    def insert_data(self, data):
+        self.clear_data()
 
-        self.view_button.clicked.connect(self.view_function)
-        self.terminate_button.clicked.connect(self.kill_function)
-        self.start_button.clicked.connect(self.start_function)
-
+        for i in range(len(data)):
+            self.ui.tableWidget.insertRow(i)
+            for j in range(len(data[i])):
+                self.ui.tableWidget.setItem(i, j, QTableWidgetItem(str(data[i][j])))
     def view_function(self):
         try:
             self.client.Command({"state": "GetApps"})

@@ -1,4 +1,16 @@
 import os
+from pathlib import Path
 
-curpath = "C:/Users/Ms Dung/Desktop/19120215.pdf"
-print(os.path.getmtime(curpath))
+source = "cc.txt"
+dest = "hi.txt"
+
+
+curpath = Path(source)
+bytesToSend = None
+with open(curpath, 'rb') as f:
+    filesize=int(os.path.getsize(curpath))
+    bytesToSend = f.read(filesize)
+    print(type(bytesToSend))
+    
+with open(dest, "wb") as f:
+    f.write(bytesToSend)
