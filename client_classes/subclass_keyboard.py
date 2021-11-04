@@ -99,15 +99,25 @@ class Subclass_Keyboard(QWidget):
         except Exception as e:
             msg = "Cannot unlock.\n" + str(e)
             PopUp.show_popup(self, "Error", msg)
+    
+    def specialKey(self, key):
+        if(keyboard.is_modifier(key) or key=='space'or key=='enter' or key=='backspace'):
+            newkey='['+key.upper()+']'
+        else:
+            newkey=key
+        return newkey
+            
         
     def showButtonPress(self):
         try:
             if(self.hooked==True):
                 self.parent.Command( { "state" : "Show"})
-                data=self.parent.Recv()
-                self.hookList.append(json.loads(data.decode('utf-8')))
+                data=self.parent.Recv()          
+                self.hookList.extend(json.loads(data.decode('utf-8')))
                 for i in range(len(self.hookList)):
-                    text=','.join(map(str, self.hookList[i]))
+                    self.hookList[i]=self.specialKey(self.hookList[i])
+                for i in range(len(self.hookList)):
+                    text=''.join(self.hookList)
                 self.textShow(text)
             else:
                 self.textShow("Chua hook")
@@ -128,6 +138,7 @@ if __name__ == "__main__":
     main_win = Subclass_Keyboard()
     main_win.show()
     sys.exit(app.exec_())
+        
         
         
         
