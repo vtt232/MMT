@@ -75,7 +75,7 @@ class Client(QMainWindow):
             data = self.Recv()
             if data != None:
                 data = data.decode()
-                PopUp.show_popup(self, "Error", data, "warning")
+                PopUp.show_popup(self, "Information", data)
         except Exception as e:
             PopUp.show_popup(self, "Error", str(e), "warning")
     def __del__(self):
@@ -137,6 +137,12 @@ if __name__ == "__main__":
     main_win = Client()
     main_win.show()
     sys.exit(app.exec_())
+
+
+
+
+
+
 
 
 

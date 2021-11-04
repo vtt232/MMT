@@ -33,26 +33,23 @@ class Subclass_registry(QMainWindow):
         self.ui.result_textbox.clear()
 
     def get_file_data(self):
-        try:
-            file_path = QFileDialog.getOpenFileName(self, 'OpenFile')[0]
-            file = open(file_path, "r")
-            data = file.read()
-            self.ui.file_data.setText(data)
-            self.ui.path_input.setText(file_path)
-            self.file_path = file_path
-        except Exception as e:
-            msg = str(e)
-            PopUp.show_popup(self, "ERROR", 
-                             msg, "warning")
+        file_path = QFileDialog.getOpenFileName(self, 'OpenFile')[0]
+        file = open(file_path, "r")
+        data = file.read()
+        self.ui.file_data.setText(data)
+        self.ui.path_input.setText(file_path)
+        self.file_path = file_path
+        
     def send_file(self, file_path):
+        self.parent.Command({"state": "Sending File"})
         try:
-            self.parent.Command({"state": "Sending File"})
             file_name = os.path.basename(file_path)
-            self.Send(str.encode(file_name))
+            self.parent.Send(str.encode(file_name))
             file = open(file_path, "r")
             data = file.read()
-            self.Send(str.encode(data))
-        except:
+            self.parent.Send(str.encode(data))
+        except Exception as e:
+            print(str(e))
             raise Exception("No file found")
             
     def send_file_data(self):

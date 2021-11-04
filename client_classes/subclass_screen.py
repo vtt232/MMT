@@ -42,7 +42,7 @@ class Subclass_Screen(QWidget):
         self.ui.Stop_stream_button.clicked.connect(
             self.stopStream)
         self.stop = False
-        self.streaming = None
+        self.stream = None
         self.img = None
     def asign(self):
         self.quality = self.ui.QualitySlider.value()
@@ -55,10 +55,13 @@ class Subclass_Screen(QWidget):
         image = PIL.Image.open(io.BytesIO(data))
         return image
     def decode(self, data): #return a pixmap
-        img = self.image_from_bytes(data)
+        self.img = self.image_from_bytes(data)
+        img = self.img.copy()
+        
         size = (self.ui.View.width(), self.ui.View.height())
         img.thumbnail(size, Image.ANTIALIAS)
         qim = ImageQt(img)
+        
         pixmap = QtGui.QPixmap.fromImage(qim).copy()
         return pixmap    
     def display(self, data):
@@ -100,12 +103,14 @@ class Subclass_Screen(QWidget):
         self.ui.Capture.setEnabled(True)
         self.ui.Save.setEnabled(True)
         try:
+            if(self.stream==None):
+                return
             self.parent.Command({"state": "StopStream"})
             self.stream.stop_server()
             self.CaptureScreen()
         except Exception as e:
             msg = str(e)
-            PopUp.show_popup(self, "Error", errorMsg,
+            PopUp.show_popup(self, "Error", msg,
                            "warning")
 if __name__ == "__main__":
     app = QApplication(sys.argv)

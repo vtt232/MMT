@@ -1,74 +1,72 @@
 import os
 import shutil
 import string
+
 from ctypes import windll
-
-
-class FileHelper():
-    
-    
-        #Kiem drive
-    def get_drives():
+from pathlib import Path
+from collections import namedtuple
+from datetime import datetime
+DataTuple = namedtuple('Data', ['name', 'date',
+                                        'size', 'type' ])
+class FileHelper:
+    def __init__(self):
+        return
+    def get_drives(self):
         drives = []
         bitmask = windll.kernel32.GetLogicalDrives()
         for letter in string.ascii_uppercase:
             if bitmask & 1:
                 drives.append(letter+":\\")
             bitmask >>= 1
-        return drives    
-    
-    
-    #FILE EXPLORER
-    #xuat ra list tep con tu ten thu muc
-    def digOneLevel(self,filename):
-        downOneLevelList=[]
-        if(filename=="My Computer"):
-            driveList=FileHelper.get_drives()
-            
-            for item in driveList:
-                print(item)
-                downOneLevelList.append(item)
-            return downOneLevelList    
-        elif os.path.isdir(filename):
-            for item in os.listdir(filename):
-                if not item.startswith('.'):
-                    downOneLevelList.append(os.path.join(filename, item))
-            return downOneLevelList
-        else:
-            downOneLevelList.append("Khong phai thu muc")
-            return downOneLevelList
-      
-    #DOWNLOAD FILE    
-    #CHINH SUA TEN FILE NEU TEN FILE TRUNG
-    def preFixFileName(self,path):
-        filename=os.path.basename(path)
-        downloadFolder="C:\\"
-        listFileName=filename.split(".")
-        num=1
-        while(os.path.exists(os.path.join(downloadFolder, filename))):
-            listFileName.insert(1, str(num))  
-            listFileName.insert(2, ".")
-            filename=''.join(listFileName)
-            listFileName.pop(1)
-            listFileName.pop(1)
-            num+=1
-        return os.path.join(downloadFolder, filename)
-    
-    def receiveFileFromClient(self,filename,data):
-        filename=self.preFixFileName(filename)
-        print(filename)
-        f = open(filename, 'wb')
-        f.write(data)
-        f.close()
-        return True;
-        
-    #XOA FILE        
+        return drives
+    def back_to_drives(self):
+        try:
+            folders =[]
+            for i in self.get_drives():
+                folders.append([i, None, None, False]) # not file
+            return {"status" : "success", "msg" : ".",
+                    "paths" : folders}
+        except Exception as e:
+             return {"status" : "failed", "msg" : str(e)}
+    def download(self, filename, data):
+        try:
+            with open(filename, "wb") as f:
+                f.write(data)
+                return {"status" : "success", "msg" : f"{filename} created"}
+        except Exception as e:
+            return {"status" : "failed", "msg" : str(e)}
     def deleteFile(self, filename):
-        if os.path.isfile(filename):
-            os.unlink(filename)
-            return True
-        elif os.path.isdir(filename):
-            shutil.rmtree(filename)
-            return True
-        else:       
-            return False 
+        try:
+            if os.path.isfile(filename):
+                os.unlink(filename)
+            elif os.path.isdir(filename):
+                shutil.rmtree(filename)
+            return {"status" : "success", "msg" : f"{filename} deleted"}
+        except Exception as e:
+            return {"status" : "failed", "msg" : str(e)}
+    def Handle(self, pathName):
+        try:
+            path = Path(pathName) #Path(self.ui.pathEdit.text())
+            if (not os.path.exists(path)):
+                return {"status" : "failed", "msg" : "Path not existed or cannot access"}
+            if (os.path.isfile(path)):
+                return {"status" : "failed", "msg" : "Not a folder"}
+            data = []
+            folders = []
+            files = [] 
+            for i in os.listdir(path):
+                curpath = os.path.join(path , i)
+                curpath = Path(curpath)
+                time = datetime.fromtimestamp(os.path.getmtime(curpath)).strftime('%d-%m-%Y-%H:%M')
+                isFile = os.path.isfile(curpath)
+                if not isFile: 
+                    size = 0
+                    folders.append(DataTuple(i, time, size, isFile))
+                else:
+                    size = os.path.getsize(curpath)
+                    files.append(DataTuple(i, time, size, isFile))
+            data = folders + files
+            return {"status" : "success", "msg" : ".",
+                    "paths" : data}
+        except Exception as e:
+             return {"status" : "failed", "msg" : str(e)}

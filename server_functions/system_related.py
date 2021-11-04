@@ -6,7 +6,7 @@ class SystemHelper:
         mac = get_mac()
         return hex(mac)
     def Shutdown(self):
-        os.system("shutdown -s -t")
+        os.system("shutdown -s -t 1")
     def Logout(self):
          os.system("shutdown -l")
     def Restart(self):

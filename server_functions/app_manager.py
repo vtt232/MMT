@@ -19,13 +19,16 @@ class AppManager(ProcessManager):
         return win_ids
 
     def get_running_app_list(self):
-        # Return a list of tuples , each of which contains information about running apps (name , id , thread count)
-        apps = []
-        for win_id in self.get_win_ids():
-            app = psutil.Process(win_id)
-            apps.append((app.name(), app.pid, app.num_threads()))
+        try:
+            # Return a list of tuples , each of which contains information about running apps (name , id , thread count)
+            apps = []
+            for win_id in self.get_win_ids():
+                app = psutil.Process(win_id)
+                apps.append((app.name(), app.pid, app.num_threads()))
 
-        return apps
+            return apps
+        except Exception as e:
+            print(str(e))
 
     def kill_app(self, app_id):
         try:

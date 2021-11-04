@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Oct 21 10:56:15 2021
-
 @author: DELL
 """
 
@@ -16,6 +15,7 @@ from PyQt5.QtWidgets import QVBoxLayout
 
 import json
 import sys
+import keyboard
 
 from gui.popup import PopUp
 
@@ -26,7 +26,8 @@ class Subclass_Keyboard(QWidget):
         super(Subclass_Keyboard, self).__init__()
         self.ui = Ui_Keyboard()
         self.ui.setupUi(self)
-        self.hooked=[]
+        self.hookList=[]
+        self.hooked=False
         
         self.parent = parent
         self.ui.hook_button.clicked.connect(self.hook)
@@ -44,7 +45,8 @@ class Subclass_Keyboard(QWidget):
         
     def hook(self):
         try:
-            self.hooked.clear()
+            self.hookList.clear()
+            self.hooked= True
             self.parent.Command( { "state" : "Hook"})
             check=self.parent.Recv()
             check=json.loads(check.decode('utf-8'))
@@ -57,10 +59,17 @@ class Subclass_Keyboard(QWidget):
             PopUp.show_popup(self, "Error", msg)
     def unhook(self):
         try:
-            self.parent.Command( { "state" : "Unhook"})
-            data=self.parent.Recv()
-            self.hooked.append(json.loads(data.decode('utf-8')))
-            self.textShow("Ngung hook")
+            if(self.hooked==True):
+                self.hooked= False
+                self.parent.Command( { "state" : "Unhook"})
+                data=self.parent.Recv()
+                check=json.loads(data.decode('utf-8'))
+                if(check==True):
+                    self.textShow("Da unhook")
+                else:
+                    self.textShow("That bai")
+            else:
+                self.textShow("Chua hook")
         except Exception as e:
             msg = "Cannot unhook.\n" + str(e)
             PopUp.show_popup(self, "Error", msg)
@@ -92,8 +101,20 @@ class Subclass_Keyboard(QWidget):
             PopUp.show_popup(self, "Error", msg)
         
     def showButtonPress(self):
-        text=','.join(str(v) for v in self.hooked)
-        self.textShow(text)
+        try:
+            if(self.hooked==True):
+                self.parent.Command( { "state" : "Show"})
+                data=self.parent.Recv()
+                self.hookList.append(json.loads(data.decode('utf-8')))
+                for i in range(len(self.hookList)):
+                    text=','.join(map(str, self.hookList[i]))
+                self.textShow(text)
+            else:
+                self.textShow("Chua hook")
+        except Exception as e:
+            msg = "Cannot show.\n" + str(e)
+            PopUp.show_popup(self, "Error", msg)
+        
         
             
     def textShow(self, text):
@@ -107,4 +128,6 @@ if __name__ == "__main__":
     main_win = Subclass_Keyboard()
     main_win.show()
     sys.exit(app.exec_())
+        
+        
         

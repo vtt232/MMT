@@ -1,9 +1,12 @@
+from gui.client.FileExplorer.client_fileExplorer import Ui_File_ui
 
-from gui.client.FileExplorer.client_fileExplorer_ui import Ui_Form
-
-
+from collections import namedtuple
 import sys
 import os
+import shutil
+
+from datetime import datetime
+from os.path import abspath
 from base64 import b64encode
 from PyQt5.QtWidgets import QWidget
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -11,148 +14,133 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QVBoxLayout
-
+from PyQt5.QtWidgets import QMainWindow, QTableWidgetItem
+from pathlib import Path
 from gui.popup import PopUp
+from PyQt5.QtWidgets import QFileDialog
+
+
 class Subclass_File(QWidget):
       
     #TAO GUI
     def __init__(self, parent = None):
         super(Subclass_File, self).__init__()
-        self.ui = Ui_Form()
+        self.ui = Ui_File_ui()
         self.ui.setupUi(self)
         
         self.parent = parent
-        self.ui.listFile.doubleClicked.connect(self.item_doubleClicked)
-        self.ui.deleteButton.clicked.connect(self.deleteFile)
-        self.ui.sendButton.clicked.connect(self.sendFile)
-        self.preFolder=[]
-    def show(self):
-        super().show()
+        #bind
         
-    
-    #FILE EXPLORER
-    #XUAT VE MAC DINH 3 THU MUC GOC
-    def restore(self):
-        listDefault=["My Computer"]
-        self.create_list(listDefault, 0)
-    #HAM GIA LAP CHO VIEC SENT MESSAGE O MO HINH CLIENT SERVER, KHI LAP VAO MO HINH THI HAM NAY CHI GUI
-    #MESSAGE VA NHAN GIA TRI TRA VE LISTITEMBELOW
-    def callServerToDig(self, itemName):
+        self.ui.Del.clicked.connect(lambda: self.delete())      
+        self.ui.content.doubleClicked.connect(lambda : 
+                                       self.item_doubleClicked())
+        self.ui.Reload.clicked.connect(lambda: self.Handle(str(self.currentPath)))
+        self.ui.Back.clicked.connect(self.BackToParent)
+        self.ui.pathEdit.returnPressed.connect(lambda: self.Handle(self.ui.pathEdit.text()))
+        self.ui.Upload.clicked.connect(self.Upload)
+        self.ui.Home.clicked.connect(self.BackHome)
+        
+        #setup
+        self.currentPath =  None
+        self.data = None
+    def GetParentPath(self, path):
+        respath = Path(path)
+        return (respath.parent.absolute())
+    def BackToParent(self):
+        self.Handle(self.GetParentPath(self.currentPath))
+    def Upload(self):
         try:
-            self.parent.Command( { "state" : "DigFile", "filename": itemName })
-            data=self.parent.Recv()
-            listItemBelow = self.parent.bytes2dict(data)
-            return listItemBelow
-        except Exception as e:
-            msg = "Cannot open this folder.\n" + str(e)
-            raise Exception(msg)
-    #XUAT DANH SACH THU MUC LEN CUA SO
-    def create_list(self, arrName, check):
-        vbox=QVBoxLayout()
-        self.ui.listFile.clear()
-        if(check==1):
-            self.ui.listFile.addItem("...")
-        self.ui.listFile.addItems(arrName)
-        vbox.addWidget(self.ui.listFile)
-    #XU LY TIM THU MUC CON HOAC TRO VE THU MUC CHA
-    def item_doubleClicked(self):
-        try:
-            itemName=self.ui.listFile.currentItem().text()
-            if(itemName=="..."):
-                if(len(self.preFolder)==1):
-                    self.preFolder.pop()
-                    self.restore()
-                elif (len(self.preFolder)>1):   
-                    self.preFolder.pop()              
-                    itemName=self.preFolder[-1]
-                    listItemBelow=self.callServerToDig(itemName)
-                    self.create_list(listItemBelow, 1)
-                elif (len(self.preFolder)<1):
-                    self.restore()
-            else:
-                self.preFolder.append(itemName) 
-                listItemBelow=self.callServerToDig(itemName)
-                self.create_list(listItemBelow, 1)
-        except Exception as e:
-             PopUp.show_popup(self, "Error", str(e), "critical")
-             
-    #XOA FILE
-    #XU LY XOA FILE
-    def deleteFile(self):
-        try:
-            itemName=self.ui.listFile.currentItem().text()
-            if(itemName!="..."):
-                check=self.callServerToDelete(itemName)
-                if(check==True):
-                    listItemBelow=self.callServerToDig(self.preFolder[-1])
-                    self.create_list(listItemBelow, 1)
-                else:
-                    PopUp.show_popup(self, "Error", "Cannot delete file",
-                                 "critical")
-            else:
-                PopUp.show_popup(self, "Warning", "Wrong file name",
-                                 "warning")
-        except Exception as e:
-            PopUp.show_popup(self, "Error", str(e), "critical")
-    #HAM GIA LAP CHO VIEC SENT MESSAGE O MO HINH CLIENT SERVER, KHI LAP VAO MO HINH THI HAM NAY CHI GUI
-    #MESSAGE VA NHAN GIA TRI TRA VE CHECK KIEM TRA CO THANH CONG HAY KHONG
-    def callServerToDelete(self, itemName):
-        try:
-            self.parent.Command( { "state" : "DeleteFile" ,"filename":itemName} )
-            check=self.parent.Recv()
-            check= self.parent.bytes2dict(check)
-            return check
-        except Exception as e:
-            msg = "Failed to delete file.\n" + str(e)
-            raise Exception(msg)
-
-
-
-
-    #GUI FILE CHO SERVER
-    #DOC FILE CAN GUI
-    def readFile(self,filename):
-        if os.path.isfile(filename):
-            filesize=int(os.path.getsize(filename))
-            with open(filename, 'rb') as f:
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog
+            fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*)", 
+                                                      options=options)            
+            if not fileName:
+                return
+            filesize=int(os.path.getsize(fileName))
+            with open(fileName, 'rb') as f:
                 bytesToSend = f.read(filesize)
-                return True, bytesToSend
-        else:
-            return False, 0
-    #XU LY GUI FILE
-    def sendFile(self):
-        try:
-            itemName=self.ui.listFile.currentItem().text()
-            if(itemName!="..."):
-                check, data=self.readFile(itemName)
-                if(check==True):
-                    self.callServerToDownload(itemName,data)
-                else:
-                    PopUp.show_popup(self, "Error", "Cannot find file",
-                                 "critical")
-            else:
-                PopUp.show_popup(self, "Warning", "Wrong file name",
-                                 "warning")
+            destFileName = str(Path(os.path.join(self.currentPath, Path(fileName).name)))
+            self.parent.Command({"state" : "UploadFile", "filename" : destFileName})
+            self.parent.Send(bytesToSend)
+            resData = self.parent.bytes2dict(self.parent.Recv())
+            PopUp.show_popup(self, "Information", 
+                             resData["msg"])
+            self.Handle(str(self.currentPath))
         except Exception as e:
-            PopUp.show_popup(self, "Error", str(e),
-                                 "critical")
-    #HAM GIA LAP CHO VIEC SENT MESSAGE O MO HINH CLIENT SERVER, KHI LAP VAO MO HINH THI HAM NAY CHI GUI
-    #MESSAGE VA NHAN GIA TRI TRA VE CHECK KIEM TRA CO THANH CONG HAY KHONG   
-    def callServerToDownload(self, itemName, data):
+           msg = "Cannot upload file.\n" + str(e)
+           PopUp.show_popup(self, "Error", msg, 
+                            "critical")
+    def BackHome(self):
         try:
-            base64_bytes=b64encode(data)
-            myfile=base64_bytes.decode("utf-8")
-            self.parent.Command( { "state" : "DownloadFile" ,"filename":itemName, "data": myfile})
-            check=self.parent.Recv()
-            check=self.parent.bytes2dict(check)
-            if(check==True):
-                PopUp.show_popup(self, "Success", "Download successfully.")
-            else:
-                raise Exception("Failed to download file.")
+            self.parent.Command({"state" : "BackHome"})
+            resData = self.parent.bytes2dict(self.parent.Recv())
+            if (resData["status"] == "success"):
+                self.data = resData["paths"]
+                self.insert_data(self.data)
+                self.currentPath  = Path("")
+                self.ui.pathEdit.setText(str(self.currentPath))
+            elif (resData["status"] == "failed"):
+                PopUp.show_popup(self, "Error", 
+                             resData["msg"], 
+                             "warning")
         except Exception as e:
-            msg = "Failed to download file.\n" + str(e)
-            raise Exception(msg)
+            msg = "Cannot go back home.\n" + str(e)
+            PopUp.show_popup(self, "Error", 
+                             msg, 
+                             "critical")
+    def Handle(self, pathName):
+        try:
+            path = Path(pathName)
+            self.parent.Command({"state" : "FileHandle", "path" : str(path)})
+            resData = self.parent.bytes2dict(self.parent.Recv())
+            if (resData["status"] == "success"):
+                self.data = resData["paths"]                
+                self.insert_data(self.data)
 
+                self.currentPath  = path
+                self.ui.pathEdit.setText(str(self.currentPath))
+            elif (resData["status"] == "failed"):
+                PopUp.show_popup(self, "Error", 
+                             resData["msg"], 
+                             "warning")
+        except Exception as e:
+            msg = "Cannot go to destinatio.\n" + str(e)
+            PopUp.show_popup(self, "Error", 
+                             msg, 
+                             "critical")
+    def delete(self):
+        try:
+            filename = self.data[self.ui.content.currentRow()][0]
+            filename = Path(os.path.join(self.currentPath, filename))
+            self.parent.Command({"state" : "DeleteFile", "filename" : str(filename)})
+            resData = self.parent.bytes2dict(self.parent.Recv())
+            PopUp.show_popup(self, "Information", 
+                             resData["msg"], )
+            self.Handle(str(self.currentPath))
+        except Exception as e:
+            msg = "Cannot delete file.\n" + str(e)
+            PopUp.show_popup(self, "Error", 
+                             msg, 
+                             "critical")
+    def insert_data(self, data):
+        self.clear_data()
+        for i in range(len(data)):
+            self.ui.content.insertRow(i)
+            for j in range(len(data[i])):
+                if (j == 0 and data[i][3] == False):
+                    itemContent =  QTableWidgetItem("📁" + str(data[i][j]))
+                else:
+                    itemContent = QTableWidgetItem(str(data[i][j]))
+                self.ui.content.setItem(i, j, itemContent)
+    def clear_data(self):
+        self.ui.content.setRowCount(0)
+    def item_doubleClicked(self):
+        if (self.data[self.ui.content.currentRow()][3] == False):
+            name = self.data[self.ui.content.currentRow()][0].replace("📁", "")
+        else:
+            name = self.data[self.ui.content.currentRow()][0]
+        proposedPath = Path(os.path.join(self.currentPath, name))
+        self.Handle(proposedPath)
 #Kich hoat
 if __name__ == "__main__":
     app = QApplication(sys.argv)
